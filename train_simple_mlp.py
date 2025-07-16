@@ -18,7 +18,7 @@ import torch
 from tqdm import tqdm
 import config
 from enviorment import PortfolioEnv
-from attention_policy import create_attention_policy, MLP_CONFIGS, SimpleMlpTD3Policy
+from attention_policy import create_attention_policy, MLP_CONFIGS, SimpleMlpTD3Policy, NormalisedTD3Policy, NormalisedDDPGPolicy
 from custom_td3 import CustomTD3  # ✅ IMPORT: Import our new custom agent
 
 
@@ -757,15 +757,19 @@ def train_simple_mlp_tf_agents_style(
     }
     
     # ✅ STABILITY IMPROVEMENTS: Add learning rate scheduling to prevent degradation
-    def lr_schedule(progress_remaining: float) -> float:
-        """Learning rate schedule for TF-Agents style training"""
-        if progress_remaining > 0.6:  # First 40% of training
-            return 1e-4
-        elif progress_remaining > 0.3:  # Middle 30%
-            return 5e-5  
-        else:  # Final 30% - fine-tuning
-            return 1e-5
-
+    # def lr_schedule(progress_remaining: float) -> float:
+    #     """Learning rate schedule for TF-Agents style training"""
+    #     print(f"🔍 Progress remaining: {progress_remaining}")
+    #     lr = progress_remaining*1e-4
+    #     print(f"🔍 Learning rate: {lr}")
+    #     return lr
+        # if progress_remaining > 0.3:  # First 40% of training
+        #     return 1e-4
+        # elif progress_remaining > 0.6:  # Middle 30%
+        #     return 5e-5  
+        # else:  # Final 30% - fine-tuning
+        #     return 1e-5
+    # lr = lr_schedule(progress_remaining=iteration/NUM_ITERATIONS)
     # Create model with exact TF-Agents parameters
     if algorithm == "TD3":
         # ✅ EXPLORATION FIX: Use OrnsteinUhlenbeckActionNoise to match TF-Agents
@@ -776,18 +780,19 @@ def train_simple_mlp_tf_agents_style(
         )
         print(f"⚡ Using OrnsteinUhlenbeckActionNoise (sigma=0.2, theta=0.15) for better exploration.")
 
-        model = CustomTD3(  # ✅ USAGE: Use the custom TD3 class
-            SimpleMlpTD3Policy, env, verbose=1, # ✅ REFACTOR: Use the specific policy class
-            policy_kwargs=policy_kwargs,     # ✅ REFACTOR: Pass architecture via policy_kwargs
-            learning_rate=policy_kwargs["actor_lr"], # ✅ FIX: Use actor_lr from kwargs for consistency lr_schedule
+        model = CustomTD3(  # ✅ USAGE: Use the custom TD3 class #CustomTD3 #TD3
+            SimpleMlpTD3Policy, env, verbose=1, # ✅ REFACTOR: Use the specific policy class #SimpleMlpTD3Policy #NormalisedTD3Policy #NormalisedDDPGPolicy
+            policy_kwargs=policy_kwargs,     # ✅ REFACTOR: Pass architecture via policy_kwargs comment out when using TD3 & NormalisedTD3Policy or NormalisedDDPGPolicy
+            learning_rate=policy_kwargs["actor_lr"], # ✅ FIX: Use actor_lr from kwargs for consistency #lr_schedule #policy_kwargs["actor_lr"]
             batch_size=200,          # BATCH_SIZE
             buffer_size=100000,       # REPLAY_BUFFER_MAX_LENGTH 
             learning_starts=100,     # Initial data collection
-            gamma=0.05,              # Low gamma for myopic learning
-            tau=0.05,                # target_update_tau
+            gamma=0.05,              # Low gamma for myopic learning orginally 0.05
+            tau=0.02,                # target_update_tau orginally 0.02
             policy_delay=5,          # ✅ TARGET UPDATE: Update targets every 5 steps
-            target_policy_noise=0.2, # ou_stddev
-            action_noise=action_noise, # ✅ EXPLORATION FIX: Use OU-Noise
+            target_policy_noise=0.2, # ou_stddev orginally 0.2
+            target_noise_clip=0.4, # ou_clip 2* target_policy_noise orginally 0.4
+            # action_noise=action_noise, # ✅ EXPLORATION FIX: Use OU-Noise
             device="auto"
         )
         print(f"✅ STABILITY FIX: Using Huber loss for the critic.")

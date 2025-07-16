@@ -519,7 +519,7 @@ class PortfolioEnv(gym.Env):
                 # Fallback to simple, dense reward until history is full
                 if self.previous_value > 1e-9:
                     raw_reward = step_return + self.long_term_bonus # Include bonus if active
-                    self.step_reward = np.clip(raw_reward, -0.1, 0.1)
+                    self.step_reward = np.clip(raw_reward, -1.0, 1.0)
                     print(f"⏳ Cold Start Reward (step {self.index}/{config.LONG_TERM_LOOKBACK}): Clipped Gross Return {self.step_reward:.4f}")
                 else:
                     self.step_reward = 0.0
@@ -589,7 +589,7 @@ class PortfolioEnv(gym.Env):
                 penalized_reward = raw_reward - risk_penalty
 
                 # As requested, clip the final reward to prevent Q-value explosion
-                self.step_reward = np.clip(penalized_reward, -0.1, 0.1)
+                self.step_reward = np.clip(penalized_reward, -1.0, 1.0)
                 
                 if abs(raw_reward) > 1e-5 or risk_penalty > 1e-5:
                     print(f"🛠️ Structured Reward: Raw {raw_reward:.4f}, RiskPenalty: {risk_penalty:.6f}, Penalized: {penalized_reward:.4f}, Clipped: {self.step_reward:.4f}")
@@ -609,7 +609,7 @@ class PortfolioEnv(gym.Env):
                 # ✅ REWARD CLIPPING FIX: Clip rewards to prevent Q-value explosion
                 # Portfolio percentage returns can occasionally spike during market events
                 # Clip to reasonable range to prevent sudden Q-value jumps
-                self.step_reward = np.clip(raw_reward, -0.1, 0.1)  # Clip to ±10% per step max
+                self.step_reward = np.clip(raw_reward, -1.0, 1.0)  # Clip to ±10% per step max
                 
                 # Track total transaction costs for episode summary
                 self.total_transaction_costs += transaction_cost
@@ -623,7 +623,7 @@ class PortfolioEnv(gym.Env):
                 raw_reward = gross_return + self.long_term_bonus
                 
                 # ✅ REWARD CLIPPING FIX: Clip rewards to prevent Q-value explosion
-                self.step_reward = np.clip(raw_reward, -0.1, 0.1)  # Clip to ±10% per step max
+                self.step_reward = np.clip(raw_reward, -1.0, 1.0)  # Clip to ±10% per step max
                 
                 if abs(self.long_term_bonus) > 1e-5:
                     print(f"📊 Simple Return: {gross_return:.4f} + LT Bonus: {self.long_term_bonus:.4f} = "
@@ -631,7 +631,7 @@ class PortfolioEnv(gym.Env):
         else:
             # Only long-term bonus if no value change
             raw_reward = self.long_term_bonus
-            self.step_reward = np.clip(raw_reward, -0.1, 0.1)  # Clip to ±10% per step max
+            self.step_reward = np.clip(raw_reward, -1.0, 1.0)  # Clip to ±10% per step max
 
     def get_observations(self):
         """Get scaled observations from current market data"""
